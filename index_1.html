@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title> Mapa Indicador de Ocupacao na RMSP</title>
+		
+	</head>
+		<style>
+			body {
+  				font: 12px sans-serif;
+			}
+
+			path {
+			  stroke-width: 1px;
+			  stroke: #050700;
+			  fill: #83ff00;
+			  cursor: pointer;
+			}
+
+			path:hover, path.highlighted {
+			  fill: #0800ff;
+			}
+
+			#chart {                                                        
+        	height: 400px;                                                 
+        	position: relative;                                            
+        	width: 4000px;                                                  
+      		}                                                                
+      		.tooltip {      
+			  position: absolute;
+			  background-color: lightgrey;
+			  border: 1px solid black;
+			  color: black;
+			  font-weight: bold;
+			  padding: 4px 8px;
+			  display: none;
+			  z-index: 10; 
+			}
+		</style>
+	    
+	
+	<body>
+	  <div id="chart"></div>
+	  <script src="http://d3js.org/d3.v3.min.js"></script>
+	  <script src="http://d3js.org/queue.v1.min.js"></script>
+	  <script src="http://d3js.org/topojson.v1.min.js"></script>
+
+	  <script>
+	  	"use strict"; //permite que o navegador saiba que deseja-se forçar um subconjunto restrito de JavaScript com essa função. Com isto, ele lançará erros explícitos sempre que o JS falhar silenciosamente.
+
+	  	//Map dimensions (in pixels)
+	  	var margin = 75,
+	        width = 985 - margin,
+	        height = 675 - margin;
+
+	    //Generate paths based on projection
+	    var projection = d3.geo.mercator()
+	    	.scale(32723.693452666987)
+		    .center([-46.45177344602454,-23.62465638892686]) //projection center
+		    .translate([width/2,height/2]); //translate to center the map in view
+
+	    //Generate paths based on projection
+	    var path = d3.geo.path()
+	    	.projection(projection);
+
+
+	    //Create an SVG
+	    var svg = d3.select("body")
+	    	.append("svg")
+	        .attr("width", width + margin)
+	        .attr("height", height + margin);
+
+	    //Group for the map features
+		var features = svg.append("g")
+   			.attr("class","features");
+	        //.append('g')
+	        //.attr('class', 'map');  
+
+	    //Create scale color
+	   	var color_scale = d3.scale.linear()
+		        .range(['#fffa00', '#0000ff']);
+
+	    //Create zoom/pan listener
+		//Change [1,Infinity] to adjust the min/max zoom scale
+		var zoom = d3.behavior.zoom()
+    		.scaleExtent([1, Infinity])
+    		.on("zoom",zoomed);
+
+		svg.call(zoom);
+
+		//Create a tooltip, hidden at the start
+		var tooltip = d3.select('#chart')
+            .append("div")
+            .attr("class","tooltip");
+
+        tooltip.append('div')                                           
+          .attr('class', 'NOMEZONA');                                      
+        tooltip.append('div')                                          
+          .attr('class', 'NOMEMUNICI');                                      
+        tooltip.append('div')                                           
+          .attr('class', 'FPO');
+
+	    // Load in my data file!
+	    d3.csv("csv_data.csv", function(error,csv_data) {
+		//debugger;
+			if (error) {
+				console.log(error);
+		    } else {
+		       	//console.log(csv_data);
+		       	//csv_data_size = csv_data.length;
+		       	var minFPO = d3.min(csv_data, function(d) { return +d.FPO;});
+				var maxFPO = d3.max(csv_data, function(d) { return +d.FPO;});
+				color_scale.domain([minFPO, maxFPO]);
+				//return (csv_data_size);
+		    }
+
+	    d3.json("jason_data.json", function (error,json_data){
+	    	//debugger;
+	    	if (error) {
+			console.log(error);
+	    	} else {
+	       		//console.log(json_data);
+	    	}
+	    	for (var i=0; i < csv_data.length; i++){
+	    		var zonaindex = parseFloat(csv_data[i].Zona);
+	    		//console.log(zonaindex);
+	    		json_data.objects.collection.geometries[zonaindex-1].properties.FPO = parseFloat(csv_data[i].FPO);   			
+	    	}
+	    	//console.log(json_data);
+
+	    	// Bind the data to the SVG and create one path per GeoJSON feature
+			features.selectAll("path")
+				//generate features from TopoJSON
+	    		.data(topojson.feature(json_data,json_data.objects.collection).features)
+	    		.enter()
+	       		.append("path")
+	        	.attr("d", path)
+	        	.style("fill", function(d) {
+					   		//Get data value
+					var value = d.properties.FPO;		   		
+					if (value) {
+						//If value exists…
+						return color_scale(value);
+					} else {
+						//If value is undefined…
+						return "#f7f7f9";
+					}
+				})
+	        	.on("mouseover",showTooltip)
+		   		.on("mousemove",moveTooltip)
+		   		.on("mouseout",hideTooltip)
+		   		.on("click",clicked);
+	        	//.style("stroke", "black")  //borda 
+	        	//.style("stroke-width", 0.5) //largura linha
+	        	
+				
+	    }); // fim json
+		}); // fim csv 
+
+	    // Add optional onClick events for features here
+		// d.properties contains the attributes (e.g. d.properties.name, d.properties.population)
+		function clicked(d,i) {
+		  /*tooltip.style("display","block")
+		   		.text("FPO: " + d.properties.FPO + "%");*/
+
+		}
+
+
+		//Update map on zoom/pan
+		function zoomed() {
+		  features.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+		      .selectAll("path").style("stroke-width", 1 / zoom.scale() + "px" );
+		}
+
+
+		//Position of the tooltip relative to the cursor
+		var tooltipOffset = {x: 5, y: -25};
+
+		//Create a tooltip, hidden at the start
+		function showTooltip(d) {
+		  moveTooltip();
+		  tooltip.select('.NOMEZONA').html("Zona: " + d.properties.NOMEZONA);
+		  tooltip.select('.NOMEMUNICI').html("Cidade: " + d.properties.NOMEMUNICI);
+		  tooltip.select('.FPO').html("FPO: " + d.properties.FPO + "%");
+		  tooltip.style('display', 'block');  
+
+
+		  /*
+
+		  tooltip.style("display","block")
+		      .text("Zona: " + d.properties.NOMEZONA);
+		  tooltip.style("display","block")
+		      .text("Cidade: " + d.properties.NOMEMUNICI);
+		  */
+		
+		}
+
+		//Move the tooltip to track the mouse
+		function moveTooltip() {
+		  tooltip.style("top",(d3.event.pageY+tooltipOffset.y)+"px")
+		         .style("left",(d3.event.pageX+tooltipOffset.x)+"px");
+		}
+
+		//Create a tooltip, hidden at the start
+		function hideTooltip() {
+		  tooltip.style("display","none");
+		}
+
+	  </script>
+	</body>
+</html>

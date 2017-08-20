@@ -1,0 +1,80 @@
+---
+
+---
+*______________________________________________________________________________________________________________________*  
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+library(ggplot2)
+library(haven)
+library(ggmap)
+library(scales)
+library(dplyr)
+library(tidyr)
+library(gridExtra)
+library(GGally)
+library(psych)
+library(grid)
+library(memisc)
+library(ggthemes)
+library(grid)
+library(foreign)
+library(RColorBrewer)
+library(descr)
+library(plyr)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Carrega_dados}
+OD_2007_v2d <- read.spss("OD_2007_v2d.sav", to.data.frame = TRUE)
+```
+
+```{r}
+OD_subset <- subset(OD_2007_v2d, select = c(zona, zonatra1,
+                                            zonatra2, n_viag,
+                                            tot_viag, modoprin,
+                                            duracao, distancia))
+```
+
+```{r}
+Entrev_zona <- count(OD_subset$zona)
+```
+
+```{r}
+Trab_zona_vive <- subset(OD_subset$zona, OD_subset$zonatra1 == OD_subset$zona |
+                                         OD_subset$zonatra2 == OD_subset$zona)
+```
+
+```{r}
+Trab_zona_vive <- as.data.frame(Trab_zona_vive)
+Trab_zona_vive <- count(Trab_zona_vive)
+```
+
+```{r}
+Quem_Nao_Trabalha <- subset(OD_subset$zona, is.na(OD_subset$zonatra1) & is.na(OD_subset$zonatra2))
+Quem_Nao_Trabalha <- count(Quem_Nao_Trabalha)
+```
+
+```{r}
+Ocupados <- Entrev_zona$freq - Quem_Nao_Trabalha$freq
+Ocupados <- as.data.frame(Ocupados)
+
+```
+
+```{r}
+dados <- bind_cols(Entrev_zona, Quem_Nao_Trabalha, Trab_zona_vive)
+colnames(dados)[1] <- "Zona"
+colnames(dados)[2] <- "Entrevistados"
+dados <- dados[,-c(3,5)]
+colnames(dados)[3] <- "Sem Ocupacao"
+colnames(dados)[4] <- "TrabZonaVive"
+dados$Ocupados <-  dados$Entrevistados-dados$`Sem Ocupacao`
+dados$FPO <- (dados$TrabZonaVive/dados$Ocupados)*100
+dados$FPO <- format(dados$FPO, digits=2, nsmall=1)
+dados$FPO <- as.numeric((dados$FPO))
+dados$Comp_FPO <- 100-as.numeric(dados$FPO)
+```
+
+```{r}
+write.csv(dados, "dadosd3", row.names = FALSE)
+```
+
