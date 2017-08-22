@@ -13,22 +13,30 @@ O valor do FPO pode ser observado passando o cursor do mouse na zona de interess
 
 
 ## Feedback
-### Questões Propostas:
+
+
+### Feedback Avaliador A - 1ª versão:
 1) O que você percebeu na visualização?
+<span style="color:green">Resp.: As regiões mais afastadas parecem ter mais fixação, porém, por serem muito maiores não quer dizer que o deslocamento não é grande...</span>.
 
 2) Que perguntas você tem sobre os dados?
+<span style="color:green">Resp.: Por que tantos indefinidos? Os dados são referentes a que mora e trabalha na mesma região, certo? Mas tem regiões muito pequenas e outras muito grandes. Talvez valesse a pena fazer ou dar a opção de visualização por distância percorrida. Acho que mudaria bastante o resultado apresentado, principalmente nas regiões próximas ao centro...</span>
+
 
 3) Que relacionamentos você percebeu?
+<span style="color:green">Resp.: Tirando alguns casos, como Marsilac, Itapeti, Reservatório de Mogi, Luz e Pq Dom Pedro, as regiões grandes tem maior FPO e regiões pequenas tem baixo FPO.
+Pode ser interessante colocar as principais vias de acesso, para perceber o porque de algumas conclusões, como o isolamento da região de Salesópolis, Pirapora e Juquitiba (esta tem a Regis, mas é único acesso).</span>
+
 
 4) O que você acha que é o principal destaque dessa visualização?
+<span style="color:green">Resp.: A interatividade: ver os dados ao passar o mouse e o zoom.</span>
 
 5) Existe algo que você não entende no gráfico?
+<span style="color:green">Resp.: Não</span>Resp.: Não
 
 6) Outras observações/questões?
+<span style="color:green">Resp.: Não</span>Resp.: Não
 
-* 1: 
-* 2:
-* 3:
 
 ## Recursos
 
