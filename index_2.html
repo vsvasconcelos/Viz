@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title> Mapa Coropleto do Indicador de Fixação da População Ucupada na RMSP em 2007 </title>
+	</head>
+
+	<style>
+				body {
+	  				font: 12px sans-serif;
+				}
+				h1 {
+	            font-family: sans-serif;
+	            color: #555;
+	            text-align: center;
+	            font-size: 16pt;
+	        	}
+	
+				path {
+				  stroke-width: 1px;
+				  stroke: #050700;
+				  fill: #83ff00;
+				  cursor: pointer;
+				}
+	
+				path:hover, path.highlighted {
+				  fill: #0800ff;
+				}
+	
+				#chart {                                                        
+	        	height: 1px;                                                 
+	        	position: relative;                                            
+	        	width: 4000px;                                                  
+	      		}                                                                
+	      		.tooltip {      
+				  position: absolute;
+				  background-color: lightgrey;
+				  border: 1px solid black;
+				  color: black;
+				  font-weight: bold;
+				  padding: 4px 8px;
+				  display: none;
+				  z-index: 10; 
+				}		
+	</style>
+
+	<body>
+	  <h1>Mapa Coropleto do Indicador Fixação da População Ocupada (FPO) na RMSP em 2007 </h1>
+	  <div id="chart"></div>
+	  <script src="http://d3js.org/d3.v3.min.js"></script>
+	  <script src="http://d3js.org/topojson.v1.min.js"></script>
+
+	  <script>
+      /*permite que o navegador saiba que deseja-se forçar um subconjunto
+      restrito de JavaScript com essa função. Com isto, ele lançará erros
+      explícitos sempre que o JS falhar silenciosamente*/
+	  	"use strict"; 
+
+	  	//Dimensões do mapa em pixels
+	  	var margin = 10,
+	       	width = 1400 - margin,
+	       	height = 600 - margin;
+		   
+	    //Paths baseados na projeção
+	    var projection = d3.geo.mercator()
+	      	.scale(32723.693452666987) // Escala adotada
+	    	.center([-46.45177344602454,-23.62465638892686]) //Centro Projeção
+	    	.translate([width/2,height/2]); // Posicionamento do centro do mapa
+
+	    //Paths baseados na projeção
+	    var path = d3.geo.path()
+	    	.projection(projection);
+
+	    //Criando um SVG
+	    var svg = d3.select("body")
+	    	.append("svg")
+	        .attr("width", width + margin)
+	        .attr("height", height + margin);
+
+	    //Agrupando as características do mapa
+		var features = svg.append("g")
+   			.attr("class","features");
+
+	    //Criando uma escala linear de cores
+	   	var color_scale = d3.scale.linear()
+		        .range(['#fffa00', '#0000ff']);
+
+
+		// Criando uma legenda
+		var legendRectSize = 40,
+  		    legendSpacing = 10;
+				
+		var legend = d3.select('svg')
+  			.append("g")
+  			.selectAll("g")
+  			.data(color_scale())
+  			.enter()
+  			.append('g')
+  			.attr('class', 'legend')
+  			.attr('transform', function(d, i) {
+  				var height = legendRectSize;
+  				var x = 0;
+  				var y = i * height;
+  			//debugger;
+  			return 'translate(' + x + ',' + y + ')';
+			  });
+		
+		legend.append('rect')
+  			.attr('width', legendRectSize)
+  			.attr('height', legendRectSize)
+  			.style('fill', color_scale())
+  			.style('stroke', color_scale());
+
+		legend.append('text')
+  			.attr('x', legendRectSize + legendSpacing)
+  			.attr('y', legendRectSize - legendSpacing)
+  			.text(function(d) { return d; }); 			
+
+	    //Criando um listener para o zoom/pan
+  		var zoom = d3.behavior.zoom()
+    		.scaleExtent([1, Infinity])
+    		.on("zoom",zoomed);
+
+		  svg.call(zoom);
+
+		 //Criando uma dica de contexto (tooltip)
+		  var tooltip = d3.select('#chart')
+            .append("div")
+            .attr("class","tooltip");
+          tooltip.append('div')                                           
+            .attr('class', 'NOMEZONA');                                      
+          tooltip.append('div')                                          
+            .attr('class', 'NOMEMUNICI');                                      
+          tooltip.append('div')                                           
+            .attr('class', 'FPO');
+
+      	//Carregando os dados da Pesquisa OD 2007
+	    d3.csv("csv_data.csv", function(error,csv_data) {
+		  //debugger;
+			if (error) {
+				console.log(error);
+		    } else {
+		       	//console.log(csv_data);
+		       	var minFPO = d3.min(csv_data, function(d) { return +d.FPO;});
+				var maxFPO = d3.max(csv_data, function(d) { return +d.FPO;});
+				color_scale.domain([minFPO, maxFPO]);
+			}
+
+	    //Carregando o mapa TopoJson das 460 zonas da RMSP 
+	    d3.json("json_data.json", function (error,json_data){
+	    	//debugger;
+	    	if (error) {
+			    console.log(error);
+	    	} else {
+	       		//console.log(json_data);
+	    	}
+	    	for (var i=0; i < csv_data.length; i++){
+	    		var zonaindex = parseFloat(csv_data[i].Zona);
+	    		//console.log(zonaindex);
+	    		json_data.objects.collection.geometries[zonaindex-1].properties.FPO = parseFloat(csv_data[i].FPO);   			
+	    	}
+
+	    	//Vinculando os dados ao SVG e criando um caminho por recurso GeoJSON
+			features.selectAll("path")
+			//Gerando características do mapa TopoJSON
+	    	.data(topojson.feature(json_data,json_data.objects.collection).features)
+	    	.enter()
+	       		.append("path")
+	        	.attr("d", path)
+	        	.style("fill", function(d) {
+			  	//Obtendo os valores dos dados
+				var value = d.properties.FPO;		   		
+					if (value) {
+						//Se o valor existir pinta a zona conforme valor do FPO
+						return color_scale(value);
+					} else {
+						//Se o valor não existir pinta a zona na cor branca
+						return "#f7f7f9";
+					}
+				})
+	        	.on("mouseover",showTooltip)
+		   		.on("mousemove",moveTooltip)
+		   		.on("mouseout",hideTooltip)
+		   		.on("click",clicked);
+	
+		    }); //fim json
+		}); //fim csv 
+
+
+	  	//Tratando eventos de click do mouse 
+	  	//Obs.: não utilizado nesta versão
+		function clicked(d,i) {
+		    /*tooltip.style("display","block")
+		   		.text("FPO: " + d.properties.FPO + "%");*/
+		}
+
+		//Atualizando o mapa no zoom/pan
+		function zoomed() {
+		  features.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+		  .selectAll("path").style("stroke-width", 1 / zoom.scale() + "px" );
+  	}
+
+		//Posicionando a dica de contexto (tooltip) em função do cursor do mouse
+		var tooltipOffset = {x: 5, y: -25};
+
+		//Criando uma dica de contexto (tooltip)
+		function showTooltip(d) {
+		  moveTooltip();
+		  tooltip.select('.NOMEZONA').html("Zona: " + d.properties.NOMEZONA);
+		  tooltip.select('.NOMEMUNICI').html("Cidade: " + d.properties.NOMEMUNICI);
+		  tooltip.select('.FPO').html("FPO: " + d.properties.FPO + "%");
+		  tooltip.style('display', 'block');  
+  	}
+
+		//Posicionando a dica de contexto (tooltip) em função do movimento do mouse
+		function moveTooltip() {
+		  tooltip.style("top",(d3.event.pageY+tooltipOffset.y)+"px")
+		         .style("left",(d3.event.pageX+tooltipOffset.x)+"px");
+		}
+
+		//Criando uma dica de contexto (tooltip)
+		function hideTooltip() {
+		  tooltip.style("display","none");
+		}
+
+	  </script>
+
+	</body>
+</html>
